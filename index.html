@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIFA Simple - Milo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: sans-serif;
+            background-color: #111827;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* --- MENÚ INICIAL --- */
+        #menu {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        #menu h1 {
+            font-size: 50px;
+            color: #00f2fe;
+            margin-bottom: 30px;
+        }
+        .btn-jugar {
+            background: #00f2fe;
+            color: black;
+            border: none;
+            padding: 20px 50px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        /* --- PANTALLA DE JUEGO (ESTADIO) --- */
+        #juego {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        /* Imagen de Fondo (Estadio) */
+        .fondo-estadio {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        /* Capa por encima del fondo para acomodar los PNGs */
+        .capa-elementos {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Marcador Superior */
+        .marcador {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 2px solid #00f2fe;
+        }
+
+        /* CONTENEDOR DEL PORTERO (Ajustado al 59.5% para máxima firmeza en el suelo) */
+        .zona-portero {
+            position: absolute;
+            top: 59.5%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 210px;  
+            height: 230px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .img-portero {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.25s ease; 
+        }
+
+        /* CONTENEDOR DE DISPARO */
+        .zona-disparo {
+            position: absolute;
+            bottom: 0px; 
+            width: 100%;
+            height: 420px; 
+            pointer-events: none;
+        }
+
+        /* JUGADOR EN PRIMER PLANO */
+        .img-jugador {
+            position: absolute;
+            left: 22%; 
+            bottom: 20px;
+            height: 380px; 
+            object-fit: contain;
+            transition: all 0.2s ease;
+        }
+
+        /* BALÓN EN PRIMER PLANO */
+        .img-balon {
+            position: absolute;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            height: 85px; 
+            object-fit: contain;
+            transition: all 0.5s ease;
+        }
+
+        /* Controles */
+        .controles {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+        .btn-tiro {
+            background: #1f2937;
+            color: white;
+            border: 1px solid #00f2fe;
+            padding: 12px 30px;
+            font-size: 18px;
+            margin: 0 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            pointer-events: auto; 
+        }
+        .btn-tiro:hover {
+            background: #00f2fe;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1>FIFA PENALES SIMPLE</h1>
+        <button class="btn-jugar" onclick="jugar()">JUGAR</button>
+    </div>
+
+    <div id="juego">
+        <img src="estadio.png" class="fondo-estadio" alt="[Estadio]">
+
+        <div class="capa-elementos">
+            <div class="marcador">
+                ⚽ GOLES: <span id="goles">0</span> | 🧤 ATAJADAS: <span id="atajadas">0</span>
+            </div>
+
+            <div class="zona-portero">
+                <img id="portero" src="portero.png" class="img-portero" alt="[Portero]">
+            </div>
+
+            <div class="zona-disparo">
+                <img id="jugador" src="jugador.png" class="img-jugador" alt="[Jugador]">
+                <img id="balon" src="balon.png" class="img-balon" alt="[Balón]">
+            </div>
+
+            <div class="controles">
+                <button class="btn-tiro" onclick="patear('izquierda')">⬅️ IZQUIERDA</button>
+                <button class="btn-tiro" onclick="patear('centro')">🎯 CENTRO</button>
+                <button class="btn-tiro" onclick="patear('derecha')">➡️ DERECHA</button>
+            </div>
+        </div>
+    </div>
+
+    <script {sandbox="allow-scripts"}>
+        let contGoles = 0;
+        let contAtajadas = 0;
+        let bloqueado = false;
+
+        function jugar() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('juego').style.display = 'block';
+        }
+
+        function patear(ladoUsuario) {
+            if (bloqueado) return;
+            bloqueado = true;
+
+            const balon = document.getElementById('balon');
+            const portero = document.getElementById('portero');
+            const jugador = document.getElementById('jugador');
+
+            // Animación del jugador pateando
+            jugador.src = 'jugador1.png'; 
+
+            const opciones = ['izquierda', 'centro', 'derecha'];
+            const ladoPortero = opciones[Math.floor(Math.random() * opciones.length)];
+
+            // Trayectoria e incremento de altura del balón
+            if (ladoUsuario === 'centro') {
+                balon.style.bottom = "250px"; 
+                balon.style.left = "50%";
+            } else if (ladoUsuario === 'izquierda') {
+                balon.style.bottom = "340px"; 
+                balon.style.left = "42%";
+            } else if (ladoUsuario === 'derecha') {
+                balon.style.bottom = "340px"; 
+                balon.style.left = "58%";
+            }
+            
+            balon.style.height = "35px"; 
+
+            // --- ANIMACIÓN DEL PORTERO AJUSTADA A LA BAJADA ---
+            if (ladoPortero === 'derecha') {
+                portero.src = 'portero1.png'; 
+                portero.style.transform = "translateX(90px) translateY(-20px)"; // Menos salto vertical para no flotar
+            } else if (ladoPortero === 'izquierda') {
+                portero.src = 'portero2.png'; 
+                portero.style.transform = "translateX(-90px) translateY(-20px)"; // Menos salto vertical para no flotar
+            } else {
+                portero.src = 'portero3.png'; 
+                portero.style.transform = "scale(1.05)"; // Se mantiene firme abajo alzando los brazos
+            }
+
+            setTimeout(() => {
+                if (ladoUsuario === ladoPortero) {
+                    alert("❌ ¡ATAJADA!");
+                    contAtajadas++;
+                    document.getElementById('atajadas').innerText = contAtajadas;
+                } else {
+                    alert("⚽ ¡GOOOL!");
+                    contGoles++;
+                    document.getElementById('goles').innerText = contGoles;
+                }
+
+                // Reiniciar posiciones
+                setTimeout(() => {
+                    balon.style.bottom = "30px";
+                    balon.style.height = "85px";
+                    balon.style.left = "50%";
+                    
+                    portero.src = 'portero.png';
+                    portero.style.transform = "none";
+
+                    jugador.src = 'jugador.png';
+                    bloqueado = false;
+                }, 1000);
+
+            }, 500);
+        }
+    </script>
+</body>
+</html>
